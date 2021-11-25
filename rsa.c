@@ -9,17 +9,14 @@ void nextPrime(mpz_t p, mpz_t t);
 void isPrime(mpz_t resultat, mpz_t n);
 void computeInvert(mpz_t d , mpz_t e , mpz_t n);
 void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t rnd);
-void encrypt(mpz_t encrypted, const mpz_t message, const mpz_t e, const mpz_t n);
-void decrypt(mpz_t original, const mpz_t encrypted, const mpz_t d, const mpz_t n);
-void powering(mpz_t resultat, const mpz_t a, const mpz_t b, const mpz_t n);
+void encrypt(mpz_t encrypted, mpz_t message, mpz_t e, mpz_t n);
+void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n);
+void powering(mpz_t resultat, mpz_t a, mpz_t b, mpz_t n);
 void sig_msg_RSA(mpz_t sig, mpz_t message, mpz_t d, mpz_t n);
 void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n);
-void RSA(int bits, mpz_t msg);
-
 void encrypt_CRT(mpz_t chiffre, mpz_t message,  mpz_t e, mpz_t n);
 void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p);
 void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p);
-void RSA_CRT(int bits, mpz_t message);
 
 
 void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more nothing less
@@ -36,7 +33,7 @@ void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more noth
        mpz_mul(_loc1, q, t);
        mpz_sub(_loc1, t0, _loc1);
        if(mpz_cmp_ui(_loc1, 0) >= 0) {
-           mpz_mod(_loc1 , _loc1 ,n);
+           mpz_mod(_loc1, _loc1, n);
        }
        else {
            mpz_mod(_loc1, _loc1, n);
@@ -53,6 +50,52 @@ void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more noth
 
    mpz_clears(e0, t0, t, q, r, n0, _loc1, NULL);
 }
+/*
+void mpz_mod(mpz_t res, mpz_t a, mpz_t b) {
+    mpz_t q, t, _loc, _loc1;
+    mpz_inits(q, t, _loc, _loc1, NULL);
+    if(mpz_sgn(a) < 0) {
+        mpz_sub(_loc, a, a); // _loc = a - a
+        mpz_sub(a, _loc, a); // a = _loc - a 
+    }
+    if(mpz_sgn(b) < 0) {
+        mpz_sub(_loc1, b, b); // _loc = a - a
+        mpz_sub(b, _loc1, b); // a = _loc - a 
+    }
+    if(mpz_cmp(a, b) < 0) {
+        mpz_set(res, a);
+    }
+    else {
+        mpz_tdiv_q(q, a, b);
+        mpz_mul(t, q, b);
+        mpz_sub(res, a, t);
+    }
+    mpz_clears(q, t, _loc, _loc1, NULL);
+}
+
+void modulus_ui(mpz_t res, mpz_t a, int b) {
+    mpz_t q, t, _loc0, _loc, _loc1;
+    mpz_inits(q, t, _loc0, _loc, _loc1, NULL);
+    mpz_set_ui(_loc0, b);
+    if(mpz_sgn(a) < 0) {
+        mpz_sub(_loc, a, a); // _loc = a - a
+        mpz_sub(a, _loc, a); // a = _loc - a 
+    }
+    if(mpz_sgn(_loc0) < 0) {
+        mpz_sub(_loc1, _loc0, _loc0); // _loc = a - a
+        mpz_sub(_loc0, _loc1, _loc0); // a = _loc - a 
+    }
+    if(mpz_cmp(a, _loc0) < 0) {
+        mpz_set(res, a);
+    }
+    else {
+        mpz_tdiv_q(q, a, _loc0);
+        mpz_mul(t, q, _loc0);
+        mpz_sub(res, a, t);
+    }
+    mpz_clears(q, t, _loc0, NULL);
+}
+*/
 void isPrime(mpz_t resultat, mpz_t n) { // Based on Miller Rabin
     mpz_t loc, p, e, m, i, k, temp;
     mpz_inits(loc, p, e, m, i, k, temp, NULL);
@@ -99,10 +142,10 @@ void isPrime(mpz_t resultat, mpz_t n) { // Based on Miller Rabin
 void nextPrime(mpz_t p, mpz_t t) {
     mpz_t loc;
     mpz_init(loc);
-    mpz_add_ui(p, t, 13); // 13 or else.
+    mpz_add_ui(p, t, 13);
     isPrime(loc, p);
     do{
-        mpz_add_ui(p, p, 13);
+        mpz_add_ui(p, p, 13); // 2 or something else
         isPrime(loc, p);
     }while (mpz_cmp_ui(loc, 0) != 1 );
     mpz_clear(loc);
@@ -112,11 +155,11 @@ void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t state) {
     mpz_t rand, loc, max, min;
     mpz_inits(rand, loc, max, min, NULL);
 
-    mpz_ui_pow_ui(max, 2, n+1); // Borne sup
+    mpz_ui_pow_ui(max, 2, n+1); // Borne sup 2^n+1
     mpz_ui_pow_ui(min, 2, n); // Borne inf
 
     do {
-        mpz_urandomm(rand, state, max ); // On le génère de la bonne taille
+        mpz_urandomm(rand, state, max); // On le génère de la bonne taille
     }while(mpz_cmp(rand, min) > 0);
 
     nextPrime(p, rand); // On prend le suivant
@@ -126,6 +169,20 @@ void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t state) {
     }while((mpz_cmp(loc, min) > 0 ) || (mpz_cmp (p, q) == 0));
 
     nextPrime(q, loc);
+    mpz_clears(rand, loc, max, min, NULL);
+}
+
+void genNumber(mpz_t p, int n, gmp_randstate_t state) {
+    mpz_t rand, loc, max, min;
+    mpz_inits(rand, loc, max, min, NULL);
+
+    mpz_ui_pow_ui(max, 2, n+1); // Borne sup
+    mpz_ui_pow_ui(min, 2, n); // Borne inf
+
+    do {
+        mpz_urandomm(rand, state, max ); // On le génère de la bonne taille
+    }while(mpz_cmp(rand, min) > 0);
+    mpz_set(p, rand);
     mpz_clears(rand, loc, max, min, NULL);
 }
 
@@ -146,15 +203,15 @@ void PGCD(mpz_t resultat, mpz_t a, mpz_t b) {
     mpz_clears(r, _r, __r, NULL);
 }
 
-void encrypt(mpz_t encrypted, const mpz_t message, const mpz_t e, const mpz_t n) {
+void encrypt(mpz_t encrypted, mpz_t message, mpz_t e, mpz_t n) {
     powering(encrypted, message, e, n); 
 }
 
-void decrypt(mpz_t original, const mpz_t encrypted, const mpz_t d, const mpz_t n) {
+void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n) {
     powering(original, encrypted, d, n);;
 }
 
-void powering(mpz_t resultat, const mpz_t a, const mpz_t b, const mpz_t n) { // res = a ^ b [n]
+void powering(mpz_t resultat, mpz_t a, mpz_t b, mpz_t n) { // res = a ^ b [n]
     mpz_t temp, t, a_bis, b_bis;
     mpz_inits(temp, t, a_bis, b_bis, NULL);
     mpz_set(a_bis, a);
@@ -193,48 +250,6 @@ void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n) {
     mpz_clear(hash);
 }
 
-void RSA(int bits, mpz_t msg) {
-    printf("RSA (basic).\n");
-    mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, message, sig;
-    mpz_inits(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, message, sig, NULL);
-    
-    mpz_set(message, msg);
-    gmp_randstate_t rand;
-    gmp_randinit_default (rand);
-    gmp_randseed_ui(rand, time(NULL));
-    genPrime(p, q, bits, rand);
-    gmp_printf("p = %Zd\n", p);
-    gmp_printf("q = %Zd\n", q);
-    mpz_set_ui(e, 65537);
-    gmp_printf("e = %Zd\n", e);
-    mpz_mul(n, p, q); // n = p * q
-
-    gmp_printf("n = p * q = %Zd\n", n);
-
-    mpz_sub_ui(p_1, p, 1); // p - 1
-    mpz_sub_ui(q_1, q, 1); // q - 1
-
-    mpz_mul(phi, p_1, q_1); 
-
-    gmp_printf("phi = %Zd\n", phi);
-    computeInvert(d, e, phi); // d = e ^-1 [phi]
-    gmp_printf("d = %Zd\n", d);
-
-    encrypt(encrypted, message, e, n);
-    gmp_printf("Cipher : %Zd\n", encrypted);
-    sig_msg_RSA(sig, message, d, n);
-    gmp_printf("Signature : %Zd\n", sig);
-    verif_sig_RSA(sig, message, e, n);
-    
-    decrypt(decrypted, encrypted, d, n);
-    gmp_printf("Decipher : %Zd\n", decrypted);
-    mpz_clears(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, NULL);
-    gmp_randclear(rand);
-}
-
-/**
-CRT MODE FROM HERE !
-*/
 
 void encrypt_CRT(mpz_t chiffre, mpz_t message,  mpz_t e, mpz_t n) {
     mpz_t cipher;
@@ -274,77 +289,96 @@ void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, m
     decrypt_CRT(sig, msg , d_p,  p,  d_q,  q,  i_p);
 }
 
-void RSA_CRT(int bits, mpz_t message) {
-    printf("RSA using CRT.\n");
-    mpz_t p, q, e, d, n, phi, msg, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig;
-
-    mpz_inits(p, q, e, d, n, phi, msg, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig, NULL);
-
-    mpz_set(msg, message);
-
+int main(int argc, char* argv[]) {
+    
+    if(argv[1] == NULL) {
+        printf("Il manque le nombre de bits. Fin du programme.\n");
+        return 0;
+    }
+    // COMPUTATION
+    clock_t t1, t2, t1_, t2_;
+    int nbBits = atoi(argv[1]);
     gmp_randstate_t rand;
     gmp_randinit_default (rand);
-    gmp_randseed_ui(rand, 1UL);
-    genPrime(p, q, bits, rand);
-
-    mpz_mul(n, p, q); // n = p * q
-
-    mpz_set_ui(e, 65537);
-
+    gmp_randseed_ui(rand, 0UL + time(NULL));
+    mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg;
+    mpz_inits(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
+    genNumber(msg, nbBits, rand);
+    gmp_printf("RSA à jeu réduit d'instruction pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
+    
+    gmp_randstate_t rand_;
+    gmp_randinit_default (rand_);
+    gmp_randseed_ui(rand_, 1UL + time(NULL));
+    genPrime(p, q, nbBits, rand_);
     gmp_printf("p = %Zd\n", p);
     gmp_printf("q = %Zd\n", q);
     mpz_set_ui(e, 65537);
     gmp_printf("e = %Zd\n", e);
+    mpz_mul(n, p, q); // n = p * q
 
+    gmp_printf("n = p * q = %Zd\n", n);
+
+    mpz_sub_ui(p_1, p, 1); // p - 1
+    mpz_sub_ui(q_1, q, 1); // q - 1
+
+    mpz_mul(phi, p_1, q_1); 
+
+    gmp_printf("phi = %Zd\n", phi);
+    computeInvert(d, e, phi); // d = e ^-1 [phi]
+    gmp_printf("d = %Zd\n", d);
+
+    printf("\n\n\n");
+
+    // RSA BASIC
+    printf("RSA (classic).\n");
+    t1 = clock();
+    encrypt(encrypted, msg, e, n);
+    gmp_printf("Cipher : %Zd\n", encrypted);
+    sig_msg_RSA(sig, msg, d, n);
+    gmp_printf("Signature : %Zd\n", sig);
+    verif_sig_RSA(sig, msg, e, n);
+    
+    decrypt(decrypted, encrypted, d, n);
+    gmp_printf("Decipher : %Zd\n", decrypted);
+    t2 = clock();
+    double exec = (double) (t2 - t1) * 1000 / (double) CLOCKS_PER_SEC;
+    printf("Execution time : %f ms \n", exec);
+
+    printf("\n\n\n");
+
+    printf("RSA using CRT.\n");
+    t1_ = clock();
     mpz_sub_ui(e_p, p, 1);
     mpz_sub_ui(e_q, q, 1);
 
-    computeInvert(i_p, p, q); // two parts
+    computeInvert(i_p, p, q); 
     computeInvert(d_p, e, e_p);
     computeInvert(d_q, e, e_q);
-    
-    mpz_sub_ui(s_p, p, 1);
-    mpz_sub_ui(s_q, q, 1);
-    mpz_mul(phi, s_p, s_q);
 
-    // On génère la clé privée
-    computeInvert(d, e, phi);
     gmp_printf("d_p = %Zd, d_q = %Zd, i_p = %Zd\n", d_p, d_q, i_p);
 
     // On chiffre suivant le CRT
     encrypt_CRT(cipher, msg, e, n);
-    gmp_printf("Cipher : %Zd\n ", cipher);
+    gmp_printf("Cipher : %Zd\n", cipher);
 
     // On signe le message
-    sig_msg_RCT(sig, msg, d_p, p, d_q, q, i_p);
-    gmp_printf("Signature CRT rev : %Zd\n", sig);
+    sig_msg_RCT(sig_crt, msg, d_p, p, d_q, q, i_p);
+    gmp_printf("Signature CRT rev : %Zd\n", sig_crt);
 
     // Vérification de la signature
-    verif_sig_RSA(sig, msg, e, n);
+    verif_sig_RSA(sig_crt, msg, e, n);
 
     // Déchiffrement suivant le CRT
     decrypt_CRT(decipher, cipher , d_p, p, d_q, q, i_p);
     gmp_printf("Decipher : %Zd\n", decipher);
-
-    mpz_clears(p, q, e, d, n, phi, msg, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig, NULL);
+    t2_ = clock();
+    mpz_clears(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
     gmp_randclear(rand);
-    //gmp_randclear(rand2);
-}
-
-int main(int argc, char* argv[]) {
-    if(argv[1] == NULL || argv[2] == NULL) {
-        printf("Il manque un argument. Fin du programme.\n");
-        return 0;
-    }
-    int nbBits = atoi(argv[1]);
-    int message = atoi(argv[2]); // On considère atm que le message peut se cast en int
-    mpz_t msg;
-    mpz_init(msg);
-    mpz_set_ui(msg, message);
-    gmp_printf("RSA à jeu réduit d'instruction pour n = %d, message : %Zd.\n", nbBits, msg);
-    printf("\n\n\n");
-    RSA(nbBits, msg);
-    printf("\n\n\n");
-    RSA_CRT(nbBits, msg);
+    gmp_randclear(rand_);
+    double exec_ = (double) (t2_ - t1_) * 1000 / (double) CLOCKS_PER_SEC;
+    printf("Execution time : %f ms \n", exec_);
+    printf("\n\n");
+    double average =  (exec / exec_) * 100;
+    printf("Conclusion : CRT is %.0f%% faster than classic RSA.\n", average);
     return 0;
 }
