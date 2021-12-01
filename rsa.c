@@ -3,25 +3,25 @@
 #include <assert.h>
 #include <time.h>
 #include <stdlib.h>
+#include <math.h>
 
-void PGCD(mpz_t resultat, mpz_t a, mpz_t b);
-void nextPrime(mpz_t p, mpz_t t);
-void isPrime(mpz_t resultat, mpz_t n);
+void PGCD(mpz_t result, mpz_t a, mpz_t b);
+void bePrime(mpz_t p, mpz_t t);
+void isPrime(mpz_t result, mpz_t n);
 void computeInvert(mpz_t d , mpz_t e , mpz_t n);
 void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t rnd);
 void encrypt(mpz_t encrypted, mpz_t message, mpz_t e, mpz_t n);
 void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n);
-void powering(mpz_t resultat, mpz_t a, mpz_t b, mpz_t n);
+void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n);
 void sig_msg_RSA(mpz_t sig, mpz_t message, mpz_t d, mpz_t n);
 void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n);
 void encrypt_CRT(mpz_t chiffre, mpz_t message,  mpz_t e, mpz_t n);
 void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p);
 void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p);
 
-
 void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more nothing less
-   mpz_t e0, t0, t, q, r, n0, _loc1;
-   mpz_inits(e0, t0, t, q, r, n0, _loc1, NULL);
+   mpz_t e0, t0, t, q, r, n0, _loc0;
+   mpz_inits(e0, t0, t, q, r, n0, _loc0, NULL);
 
    mpz_set_ui(t, 1) ;
    mpz_set(n0, n);
@@ -30,16 +30,16 @@ void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more noth
    mpz_mod(r, n0, e0);
 
    do {
-       mpz_mul(_loc1, q, t);
-       mpz_sub(_loc1, t0, _loc1);
-       if(mpz_cmp_ui(_loc1, 0) >= 0) {
-           mpz_mod(_loc1, _loc1, n);
+       mpz_mul(_loc0, q, t);
+       mpz_sub(_loc0, t0, _loc0);
+       if(mpz_cmp_ui(_loc0, 0) >= 0) {
+           mpz_mod(_loc0, _loc0, n);
        }
        else {
-           mpz_mod(_loc1, _loc1, n);
+           mpz_mod(_loc0, _loc0, n);
        }
        mpz_set(t0, t);
-       mpz_set(t, _loc1);
+       mpz_set(t, _loc0);
        mpz_set(n0, e0);
        mpz_set(e0, r);
        mpz_tdiv_q(q, n0, e0);
@@ -48,75 +48,71 @@ void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more noth
    }while(mpz_cmp_ui(r, 0) > 0);
    mpz_set(d, t);
 
-   mpz_clears(e0, t0, t, q, r, n0, _loc1, NULL);
+   mpz_clears(e0, t0, t, q, r, n0, _loc0, NULL);
 }
 /*
-void mpz_mod(mpz_t res, mpz_t a, mpz_t b) {
-    mpz_t q, t, _loc, _loc1;
-    mpz_inits(q, t, _loc, _loc1, NULL);
-    if(mpz_sgn(a) < 0) {
-        mpz_sub(_loc, a, a); // _loc = a - a
-        mpz_sub(a, _loc, a); // a = _loc - a 
-    }
+void modulus(mpz_t res, mpz_t a, mpz_t b) {
+    mpz_t q, t, _loc;
+    mpz_inits(q, t, _loc, NULL);
     if(mpz_sgn(b) < 0) {
-        mpz_sub(_loc1, b, b); // _loc = a - a
-        mpz_sub(b, _loc1, b); // a = _loc - a 
+        mpz_neg(_loc, b); // b = - b 
     }
-    if(mpz_cmp(a, b) < 0) {
+    else {
+        mpz_set(_loc, b);
+    }
+    if(mpz_cmp(a, _loc) < 0) {
         mpz_set(res, a);
     }
     else {
-        mpz_tdiv_q(q, a, b);
-        mpz_mul(t, q, b);
+        mpz_tdiv_q(q, a, _loc);
+        mpz_mul(t, q, _loc);
         mpz_sub(res, a, t);
     }
-    mpz_clears(q, t, _loc, _loc1, NULL);
+    mpz_clears(q, t, _loc, NULL);
 }
 
 void modulus_ui(mpz_t res, mpz_t a, int b) {
-    mpz_t q, t, _loc0, _loc, _loc1;
-    mpz_inits(q, t, _loc0, _loc, _loc1, NULL);
-    mpz_set_ui(_loc0, b);
-    if(mpz_sgn(a) < 0) {
-        mpz_sub(_loc, a, a); // _loc = a - a
-        mpz_sub(a, _loc, a); // a = _loc - a 
+    mpz_t q, t, z_b, _loc;
+    mpz_inits(q, t, z_b, _loc, NULL);
+    mpz_set_ui(z_b, b);
+    if(mpz_sgn(z_b) < 0) {
+        mpz_neg(_loc, z_b); // b = - b 
     }
-    if(mpz_sgn(_loc0) < 0) {
-        mpz_sub(_loc1, _loc0, _loc0); // _loc = a - a
-        mpz_sub(_loc0, _loc1, _loc0); // a = _loc - a 
+    else {
+        mpz_set(_loc, z_b);
     }
-    if(mpz_cmp(a, _loc0) < 0) {
+    if(mpz_cmp(a, _loc) < 0) {
         mpz_set(res, a);
     }
     else {
-        mpz_tdiv_q(q, a, _loc0);
-        mpz_mul(t, q, _loc0);
+        mpz_tdiv_q(q, a, _loc);
+        mpz_mul(t, q, _loc);
         mpz_sub(res, a, t);
     }
-    mpz_clears(q, t, _loc0, NULL);
+    mpz_clears(q, t, _loc, z_b, NULL);
 }
 */
-void isPrime(mpz_t resultat, mpz_t n) { // Based on Miller Rabin
-    mpz_t loc, p, e, m, i, k, temp;
-    mpz_inits(loc, p, e, m, i, k, temp, NULL);
+void isPrime(mpz_t result, mpz_t n) { // Based on Miller Rabin
+    mpz_t _loc0, p, e, m, i, k, _loc1;
+    mpz_inits(_loc0, p, e, m, i, k, _loc1, NULL);
 
     mpz_sub_ui(m, n, 1);
     mpz_sub_ui(e, n, 1);
-    mpz_set_ui(loc, 10);
+    mpz_set_ui(_loc0, 10);
 
     mpz_set_ui(k, 0);
-    mpz_mod_ui(temp, e, 2);
+    mpz_mod_ui(_loc1, e, 2);
 
     do {
-        mpz_tdiv_q_ui(e, e, 2);
+        mpz_tdiv_q_ui(e, e, 2); 
         mpz_add_ui(k, k, 1);
-        mpz_mod_ui(temp, e, 2);
-    }while(mpz_cmp_ui(temp, 0) == 0);
+        mpz_mod_ui(_loc1, e, 2);
+    }while(mpz_cmp_ui(_loc1, 0) == 0);
 
-    powering(p, loc, e, n);
+    powering(p, _loc0, e, n);
 
     if(mpz_cmp_ui(p, 1) == 0) { // 1...
-        mpz_set_ui(resultat , 1);
+        mpz_set_ui(result , 1);
         return;
     }
 
@@ -124,11 +120,11 @@ void isPrime(mpz_t resultat, mpz_t n) { // Based on Miller Rabin
 
     do {
         if(mpz_cmp(p, m) == 0) {
-            mpz_set_ui(resultat, 1);
+            mpz_set_ui(result, 1);
             break;
         }
         if(mpz_cmp_ui(p, 1) == 0) {
-            mpz_set_ui(resultat, 0);
+            mpz_set_ui(result, 0);
             break;
         }
         mpz_mul(p, p, p);
@@ -136,45 +132,46 @@ void isPrime(mpz_t resultat, mpz_t n) { // Based on Miller Rabin
 
         mpz_add_ui(i, i, 1);
     }while(mpz_cmp(i, k) < 0);
-    mpz_clears(loc, p, e, m, i, k, temp, NULL);
+    mpz_clears(_loc0, p, e, m, i, k, _loc1, NULL);
 }
 
-void nextPrime(mpz_t p, mpz_t t) {
-    mpz_t loc;
-    mpz_init(loc);
+void bePrime(mpz_t p, mpz_t t) {
+    mpz_t _loc0;
+    mpz_init(_loc0);
     mpz_add_ui(p, t, 13);
-    isPrime(loc, p);
+    isPrime(_loc0, p);
     do{
         mpz_add_ui(p, p, 13); // 2 or something else
-        isPrime(loc, p);
-    }while (mpz_cmp_ui(loc, 0) != 1 );
-    mpz_clear(loc);
+        isPrime(_loc0, p);
+    }while (mpz_cmp_ui(_loc0, 0) != 1 );
+    mpz_clear(_loc0);
 }
 
 void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t state) {
-    mpz_t rand, loc, max, min;
-    mpz_inits(rand, loc, max, min, NULL);
+    mpz_t rand, _loc0, max, min;
+    mpz_inits(rand, _loc0, max, min, NULL);
 
     mpz_ui_pow_ui(max, 2, n+1); // Borne sup 2^n+1
     mpz_ui_pow_ui(min, 2, n); // Borne inf
 
     do {
         mpz_urandomm(rand, state, max); // On le génère de la bonne taille
-    }while(mpz_cmp(rand, min) > 0);
+    }while(mpz_cmp(rand, min) < 0);
 
-    nextPrime(p, rand); // On prend le suivant
+    bePrime(p, rand); // On cherche un premier de taille prédefinie
 
     do {
-        mpz_urandomm(loc, state, max );
-    }while((mpz_cmp(loc, min) > 0 ) || (mpz_cmp (p, q) == 0));
+        mpz_urandomm(_loc0, state, max );
+    }while((mpz_cmp(_loc0, min) < 0 ));
 
-    nextPrime(q, loc);
-    mpz_clears(rand, loc, max, min, NULL);
+    bePrime(q, _loc0);
+    // TODO: verif si p != q
+    mpz_clears(rand, _loc0, max, min, NULL);
 }
 
 void genNumber(mpz_t p, int n, gmp_randstate_t state) {
-    mpz_t rand, loc, max, min;
-    mpz_inits(rand, loc, max, min, NULL);
+    mpz_t rand, _loc0, max, min;
+    mpz_inits(rand, _loc0, max, min, NULL);
 
     mpz_ui_pow_ui(max, 2, n+1); // Borne sup
     mpz_ui_pow_ui(min, 2, n); // Borne inf
@@ -183,24 +180,24 @@ void genNumber(mpz_t p, int n, gmp_randstate_t state) {
         mpz_urandomm(rand, state, max ); // On le génère de la bonne taille
     }while(mpz_cmp(rand, min) > 0);
     mpz_set(p, rand);
-    mpz_clears(rand, loc, max, min, NULL);
+    mpz_clears(rand, _loc0, max, min, NULL);
 }
 
 
-void PGCD(mpz_t resultat, mpz_t a, mpz_t b) {
-    mpz_t r, _r, __r;
-    mpz_inits(r, _r, __r, NULL);
+void PGCD(mpz_t result, mpz_t a, mpz_t b) {
+    mpz_t _loc0, _loc1, _loc2;
+    mpz_inits(_loc0, _loc1, _loc2, NULL);
 
-    mpz_set(r, a);
-    mpz_set(_r, b);
+    mpz_set(_loc0, a);
+    mpz_set(_loc1, b);
 
-    while(mpz_cmp_ui(_r, 0) != 0) {
-        mpz_mod(__r, r, _r);
-        mpz_set(r, _r);
-        mpz_set(_r, __r);
+    while(mpz_cmp_ui(_loc1, 0) != 0) {
+        mpz_mod(_loc2, _loc0, _loc1);
+        mpz_set(_loc0, _loc1);
+        mpz_set(_loc1, _loc2);
     }
-    mpz_set(resultat, r);
-    mpz_clears(r, _r, __r, NULL);
+    mpz_set(result, _loc0);
+    mpz_clears(_loc0, _loc1, _loc2, NULL);
 }
 
 void encrypt(mpz_t encrypted, mpz_t message, mpz_t e, mpz_t n) {
@@ -211,26 +208,26 @@ void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n) {
     powering(original, encrypted, d, n);;
 }
 
-void powering(mpz_t resultat, mpz_t a, mpz_t b, mpz_t n) { // res = a ^ b [n]
-    mpz_t temp, t, a_bis, b_bis;
-    mpz_inits(temp, t, a_bis, b_bis, NULL);
+void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) { // res = a ^ b [n]
+    mpz_t _loc, t, a_bis, b_bis;
+    mpz_inits(_loc, t, a_bis, b_bis, NULL);
     mpz_set(a_bis, a);
     mpz_set(b_bis, b);
-    mpz_set_ui(temp, 1);
+    mpz_set_ui(_loc, 1);
 
     while (mpz_cmp_ui(b_bis, 0) > 0) {
         mpz_mod_ui(t, b_bis, 2);
         if(mpz_cmp_ui(t, 0) != 0) {
-            mpz_mul(temp, temp, a_bis);
-            mpz_mod(temp, temp, n);
+            mpz_mul(_loc, _loc, a_bis);
+            mpz_mod(_loc, _loc, n);
         }
         mpz_mul(a_bis, a_bis, a_bis);
         mpz_mod (a_bis, a_bis, n);
         mpz_tdiv_q_ui(b_bis, b_bis, 2);
     }
 
-    mpz_set(resultat, temp);
-    mpz_clears( temp, t, a_bis, b_bis, NULL);
+    mpz_set(result, _loc);
+    mpz_clears( _loc, t, a_bis, b_bis, NULL);
 }
 
 void sig_msg_RSA(mpz_t sig, mpz_t message, mpz_t d, mpz_t n) {
@@ -254,18 +251,18 @@ void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n) {
 void encrypt_CRT(mpz_t chiffre, mpz_t message,  mpz_t e, mpz_t n) {
     mpz_t cipher;
 
-	mpz_inits(cipher, NULL);
+	mpz_init(cipher);
 	mpz_set_si(cipher, 1);
 
     powering(cipher, message, e, n);
     mpz_set(chiffre, cipher);
 
-    mpz_clears(cipher, NULL);
+    mpz_clear(cipher);
 }
 
 void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p) {
-    mpz_t message, m_p, m_q, n, temp, pq, _temp;
-	mpz_inits(message, m_p, m_q, n, temp, pq, _temp, NULL);
+    mpz_t message, m_p, m_q, n, _loc0, pq, _loc1;
+	mpz_inits(message, m_p, m_q, n, _loc0, pq, _loc1, NULL);
 
 	mpz_set_ui(message, 1);
 	mpz_mul(n, p, q);
@@ -274,15 +271,15 @@ void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t
     decrypt(m_q, cipher, d_q, q);
 
 	mpz_sub(pq, m_q, m_p);
-	mpz_mul(temp, pq, i_p);
-	mpz_mod(_temp, temp, q);
-	mpz_mul(message, _temp, p);
+	mpz_mul(_loc0, pq, i_p);
+	mpz_mod(_loc1, _loc0, q);
+	mpz_mul(message, _loc1, p);
 	mpz_add(message, message, m_p);
 	mpz_mod(message, message, n);
 
     mpz_set(msg, message);
 
-	mpz_clears(message, m_p, m_q, n, _temp, pq, NULL);
+	mpz_clears(message, m_p, m_q, n, _loc0, _loc1, pq, NULL);
 }
 
 void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p) {
@@ -300,16 +297,12 @@ int main(int argc, char* argv[]) {
     int nbBits = atoi(argv[1]);
     gmp_randstate_t rand;
     gmp_randinit_default (rand);
-    gmp_randseed_ui(rand, 0UL + time(NULL));
+    gmp_randseed_ui(rand, time(NULL));
     mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg;
     mpz_inits(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
-    genNumber(msg, nbBits, rand);
-    gmp_printf("RSA à jeu réduit d'instruction pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
-    
-    gmp_randstate_t rand_;
-    gmp_randinit_default (rand_);
-    gmp_randseed_ui(rand_, 1UL + time(NULL));
-    genPrime(p, q, nbBits, rand_);
+    genNumber(msg, round(nbBits / 2), rand);
+    gmp_printf("RSA à jeu réduit d'instructions pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
+    genPrime(p, q, round(nbBits / 2), rand);
     gmp_printf("p = %Zd\n", p);
     gmp_printf("q = %Zd\n", q);
     mpz_set_ui(e, 65537);
@@ -348,8 +341,8 @@ int main(int argc, char* argv[]) {
 
     printf("RSA using CRT.\n");
     t1_ = clock();
-    mpz_sub_ui(e_p, p, 1);
-    mpz_sub_ui(e_q, q, 1);
+    mpz_sub_ui(e_p, p, 1); //e_p = p - 1
+    mpz_sub_ui(e_q, q, 1); //e_q = q - 1
 
     computeInvert(i_p, p, q); 
     computeInvert(d_p, e, e_p);
@@ -374,7 +367,6 @@ int main(int argc, char* argv[]) {
     t2_ = clock();
     mpz_clears(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
     gmp_randclear(rand);
-    gmp_randclear(rand_);
     double exec_ = (double) (t2_ - t1_) * 1000 / (double) CLOCKS_PER_SEC;
     printf("Execution time : %f ms \n", exec_);
     printf("\n\n");
