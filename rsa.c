@@ -77,7 +77,7 @@ void modulus_ui(mpz_t res, mpz_t a, int b) {
     mpz_set_ui(z_b, b);
     if(mpz_sgn(z_b) < 0) {
         mpz_neg(_loc, z_b); // b = - b 
-    }
+    } //Si b est négatif, on le met en positif et on change le signe de a ?
     else {
         mpz_set(_loc, z_b);
     }
@@ -85,7 +85,7 @@ void modulus_ui(mpz_t res, mpz_t a, int b) {
         mpz_set(res, a);
     }
     else {
-        mpz_tdiv_q(q, a, _loc);
+        mpz_tdiv_q(q, a, _loc); // Essayer avec mpz_cdiv_q
         mpz_mul(t, q, _loc);
         mpz_sub(res, a, t);
     }
