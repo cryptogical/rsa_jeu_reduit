@@ -1,0 +1,555 @@
+\documentclass[12pt]{article}
+%\usepackage{natbib}
+\usepackage[french]{babel}
+\usepackage{url}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{vmargin}
+\usepackage{xcolor}
+\usepackage{bbm}
+\usepackage{amsmath,amsthm,amssymb,latexsym,amsfonts}
+\usepackage{dsfont}
+\usepackage{stmaryrd}
+\usepackage{systeme}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{pifont}
+\usepackage[cache=false]{minted}
+\definecolor{LightGray}{gray}{0.95}
+\usepackage{autobreak}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{titlesec}
+
+\title{RSA à jeu réduit d'instructions}
+\author{PIARD A. - JACQUET R.}
+\date{\today}
+
+\makeatletter
+\let\thetitle\@title
+\let\theauthor\@author
+\let\thedate\@date
+\makeatother
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\theauthor}
+\lhead{\thetitle}
+\cfoot{\thepage}
+\def\dotfill#1{\cleaders\hbox to #1{.}\hfill}
+\newcommand\dotline[2][.5em]{\leavevmode\hbox to #2{\dotfill{#1}\hfil}}
+
+\setcounter{secnumdepth}{4}
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+%définition commande présentation fonction
+\newcommand{\fonction}[5]{
+\begin{displaymath}
+\begin{array}{l|rcl}
+\displaystyle
+#1 : & #2 & \longrightarrow & #3 \\
+    & #4 & \longmapsto & #5
+\end{array}
+\end{displaymath}
+}
+%fin définition
+\theoremstyle{remark}\newtheorem{note}{Note}
+\theoremstyle{remark}\newtheorem{nota}{Notation}
+
+\newcommand{\M}{\mathbbm{M}}
+\newcommand{\N}{\mathbbm{N}}
+\newcommand{\Z}{\mathbbm{Z}}
+\newcommand{\Q}{\mathbbm{Q}}
+\newcommand{\R}{\mathbbm{R}}
+\newcommand{\C}{\mathbbm{C}}
+\newcommand{\G}{\mathbbm{G}}
+\newcommand{\K}{\mathbbm{K}}
+\newcommand{\F}{\mathbbm{F}}
+\newcommand{\Fq}{\mathbbm{F}_q}
+\newcommand{\Fqn}{\mathbbm{F}_{q^n}}
+\newcommand{\Fp}{\mathbbm{F}_p}
+
+%fin définition
+
+
+% de jolies accolades
+\newcommand{\accolade}[2]{
+\begin{displaymath}
+%#1 = \left\{
+    \begin{array}{ll}
+       #1 %& \mbox{si }
+       #2 %& \mbox{sinon.}
+    \end{array}
+\right.
+\end{displaymath}
+}
+% de jolies accolades
+
+
+\newtheorem{theorem}{Théorème}
+\newtheorem{corollaire}{Corollaire}
+\newtheorem{lemma}{Lemme}
+\newtheorem{prop}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Définition}
+\newtheorem{example}{Exemple}
+\newtheorem*{examples}{Exemples}
+\newtheorem{exo}{Exercice}	
+\newtheorem{coro}{Corollaire}	
+\newtheorem{rem}{Remarque}
+\newtheorem{crit}{Critère}
+\newtheorem{bg}{A l'attention des bg, question}
+
+\begin{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{titlepage}
+	\centering
+    \vspace*{0.7 cm}
+    \textsc{\LARGE \makebox[\textwidth][s]{Développement de Logiciels}
+     Cryptographiques\\ \vspace{0.2cm} 2021 - 2022}\\[1.0 cm]
+    \dotline[15pt]{15cm}\\
+	\includegraphics[scale = 2.2]{logo.png}
+	\dotline[15pt]{15cm}\\
+	\vspace{1.5cm}
+	\textsc{\Large Faculté des Sciences et Techniques}\\
+	\textsc{\large Master 2 - Maths. CRYPTIS}\\[1.0 cm]
+	\rule{\linewidth}{0.2 mm} \\[0.4 cm]
+	{ \huge \bfseries \color{blue} \thetitle}\\
+	\rule{\linewidth}{0.2 mm} \\[1.5 cm]
+	
+	\begin{minipage}{0.4\textwidth}
+		\begin{flushleft} \large
+			\emph{A l'attention de :}\\
+			M. CLAVIER\\
+			\phantom{a}\\
+			\phantom{a}\\
+		\end{flushleft}
+	\end{minipage}
+	\begin{minipage}{0.5\textwidth}
+    	\begin{flushright} \large
+		\emph{Rédigé par :}\\
+		PIARD A.\\
+		JACQUET R.\\
+		\end{flushright}
+	\end{minipage}\\[2 cm]
+\end{titlepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tableofcontents
+\pagebreak
+\section*{Introduction}
+\addcontentsline{toc}{part}{Introduction}
+
+Le but de ce travail est d'implémenter les différentes fonctionnalités de RSA (généra-\\
+tion des clés, chiffrement, déchiffrement, signature, et méthode CRT). Ces implémen-\\
+tations devront satisfaire à une contrainte bien précise : ne pas disposer de fonctions mathématiques évoluées, et se limiter aux seules quatre opérations de base sur grands entiers, que sont l'addition, la soustraction, la multiplication et la division. On appelle cette contrainte \textit{jeu réduit d'instructions}.\\\\
+Pour la manipulation de grands entiers en \textbf{C}, l'utilisation de la bibliothèque GMP, étudiée ce semestre, est nécessaire.
+
+ % A ETOFFER %
+
+\pagebreak
+
+\section{Fonctions}
+En raison de l'utilisation des seules quatre opérations élémentaires pour ce projet, des fonctions "supplémentaires" à RSA ont dû être ajoutées. En effet, pour chiffrer comme pour déchiffrer avec RSA, certaines opérations comme l'exponentiation modulaire, l'inverse modulaire, ou plus simplement le calcul modulaire sont nécessaires. Nous allons donc présenter ces fonctions dans la première partie. Pour ce qui est de la seconde partie, vous retrouverez toutes les fonctions nécessaires à la bonne fonctionnalité de RSA, c'est à dire les fonctions de chiffrement et déchiffrement, de signature et de vérification de signature, mais également leurs analogues par la méthode CRT. De plus, vous pourrez y retrouver la fonction de génération des clés.
+
+\subsection{Fonctions palliatives au jeu réduit d'instructions.}
+
+\subsubsection{getModulus\_ui(mpz\_t res, mpz\_t a, int b)}
+Cette fonction permet de calculer le modulo d'un grand nombre, c'est à dire son reste par la division euclidienne. Ici, le reste de la division euclidienne de $a$ par $b$ sera stocké dans $res$. $res$ est un \textsf{mpz\_t}, de même que $a$, mais $b$ est quant à lui un entier \textsf{int}.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void getModulus_ui(mpz_t res, mpz_t a, int b) {
+    mpz_t z_b;
+    mpz_init(z_b);
+    mpz_set_ui(z_b, b);
+    mpz_fdiv_r(res, a, z_b);
+}
+\end{minted}
+
+Dans cette fonction, nous avons simplement effectué un cast de int vers mpz\_t en déclarant un \textsf{mpz\_t} $z\_b$. On lui assigne alors la valeur de $b$ (ligne $4$). Ensuite, on récupère le reste de la division euclidienne, que l'on stocke dans $res$ grâce à la ligne $5$.
+
+La fonction getModulus(\textsf{mpz\_t} $res$, \textsf{mpz\_t} $a$, \textsf{mpz\_t} $b$)qui renvoie le résultat de $a$ modulo $b$, c'est à dire le reste de la division euclidienne de $a$ par $b$, et ce résultat est stocké dans $res$.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void getModulus(mpz_t res, mpz_t a, mpz_t b) {
+    mpz_fdiv_r(res, a, b);
+}
+\end{minted}
+
+\pagebreak
+
+\subsubsection{Inverse modulaire}
+La fonction qui calcule l'inverse modulaire d'un très grand nombre, représenté par un \textsf{mpz\_t}, a l'en-tête suivant :
+\begin{center}
+computeInvert(\textsf{mpz\_t} $d$, \textsf{mpz\_t} $e$, \textsf{mpz\_t} $n$)
+\end{center}
+Cette fonction prend en arguments trois \textsf{mpz\_t} distincts qui sont $d$, $e$ et $n$. Dans $d$ sera stocké l'inverse de $e$ modulo $n$. Pour ce faire, le code suivant a été écrit :\\
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{c}
+void computeInvert(mpz_t d , mpz_t e , mpz_t n) {
+   mpz_t e0, t0, t, q, r, n0, _loc0;
+   mpz_inits(e0, t0, t, q, r, n0, _loc0, NULL);
+
+   mpz_set_ui(t, 1);
+   mpz_set(n0, n);
+   mpz_set(e0, e);
+   mpz_tdiv_q(q, n0, e0);
+   getModulus(r, n0, e0);
+   do {
+       mpz_mul(_loc0, q, t); // _loc0 = q * t
+       mpz_sub(_loc0, t0, _loc0); // _loc0 = t0 - _loc0
+       if(mpz_cmp_ui(_loc0, 0) >= 0) {
+           getModulus(_loc0, _loc0, n); // _loc0 = _loc0 % n
+       }
+       else {
+           getModulus(_loc0, _loc0, n); // _loc0 = _loc0 % n
+       }
+       mpz_set(t0, t);
+       mpz_set(t, _loc0);
+       mpz_set(n0, e0);
+       mpz_set(e0, r);
+       mpz_tdiv_q(q, n0, e0);
+       getModulus(r, n0, e0);
+
+   }while(mpz_cmp_ui(r, 0) > 0);
+   mpz_set(d, t);
+
+   mpz_clears(e0, t0, t, q, r, n0, _loc0, NULL);
+}
+\end{minted}
+
+Il s'agit ni plus ni moins de l'implémentation de l'Algorithme d'Euclide Étendu (AEE).
+
+%%% À détailler ? %%%
+
+\pagebreak
+
+
+\subsubsection{Puissance modulaire}
+
+la fonction qui calcule la puissance modulaire a l'en-tête suivant :
+\begin{center}
+powering(\textsf{mpz\_t} $result$, \textsf{mpz\_t} $a$, \textsf{mpz\_t} $b$, \textsf{mpz\_t} $n$)
+\end{center}
+Cette fonction permet d'effectuer une exponentiation modulaire. Les paramètres de cette fonction permettent de calculer $a^b$ mod $n$, qui sera stocké dans $result$. 
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) {
+    mpz_t _loc, t, a_bis, b_bis;
+    mpz_inits(_loc, t, a_bis, b_bis, NULL);
+    mpz_set(a_bis, a);
+    mpz_set(b_bis, b);
+    mpz_set_ui(_loc, 1);
+
+    while (mpz_cmp_ui(b_bis, 0) > 0) {
+        getModulus_ui(t, b_bis, 2); // t = b_bis % 2
+        if(mpz_cmp_ui(t, 0) != 0) {
+            mpz_mul(_loc, _loc, a_bis); // _loc = _loc * a_bis
+            getModulus(_loc, _loc, n); // _loc = _loc % n
+        }
+        mpz_mul(a_bis, a_bis, a_bis); // a_bis = a_bis * a_bis
+        getModulus(a_bis, a_bis, n); // a_bis = a_bis % n
+        mpz_tdiv_q_ui(b_bis, b_bis, 2);
+    }
+
+    mpz_set(result, _loc);
+    mpz_clears( _loc, t, a_bis, b_bis, NULL);
+}
+\end{minted}
+
+%%% Finir de détailler %%%
+
+\pagebreak
+
+\subsection{Fonctions relatives à RSA}
+
+Dans cette section, vous trouverez toutes les fonctions relatives au bon fonctionnement de RSA. Cela va de la génération des clés à la signature RSA, en passant par le chiffrement et le déchiffrement, les vérifications de signature et les mêmes méthodes en version CRT.
+
+\subsubsection{Génération des clés}
+Dans un premier temps, nous avons créés des fonctions permettant de créer un nombre premier (et de vérifier qu'il est bien premier). Nous avons également implémenté une fonction qui calcule le PGCD de deux nombres. Ceci dans le but de créer efficacement les clés publiques et privées de RSA.\\
+%\addcontentsline{toc}{part}{Vérification du caractère premier d'un nombre}
+\textbf{Vérification du caractère premier d'un nombre}\\\\
+La fonction qui permet la génération des grands premiers $p$ et $q$ a l'en-tête suivante :
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t state) {
+    mpz_t rand, _loc0, max, min;
+    mpz_inits(rand, _loc0, max, min, NULL);
+    mpz_ui_pow_ui(max, 2, n+1); // Borne sup 2^n+1
+    mpz_ui_pow_ui(min, 2, n); // Borne inf
+    do {
+        mpz_urandomm(rand, state, max); // On le génère de la bonne taille
+    }while(mpz_cmp(rand, min) < 0);
+    bePrime(p, rand); // On cherche un premier de taille prédefinie
+    do {
+        mpz_urandomm(_loc0, state, max );
+    }while((mpz_cmp(_loc0, min) < 0 ));
+    bePrime(q, _loc0);
+    if(mpz_cmp(p, q) == 0) {
+        while(mpz_cmp(p, q) == 0) {
+            do {
+                mpz_urandomm(_loc0, state, max );
+            }while((mpz_cmp(_loc0, min) < 0 ));
+            bePrime(q, _loc0);
+        }
+    }
+    mpz_clears(rand, _loc0, max, min, NULL);
+}
+
+\end{minted}
+
+Cette fonction va générer des nombres $p$ et $q$ de taille $n$ et va ensuite les 'rendre' premier grâce à la fonction \textsf{bePrime(\textsf{mpz\_t} $p$, \textsf{mpz\_t} $t$)} qui est disponible dans le fichier source de notre projet. Le test de primalité utilisé est basé sur le test de \textsc{Miller Rabin}.
+\subsubsection{Chiffrements}
+Concernant le chiffrement, il n'y aucun différence entre le RSA basique et le RSA CRT. Étudions le code suivant de la fonction \textsf{main()},
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+...
+// RSA BASIC
+// Initialisation des variables
+    genNumber(msg, round(nbBits / 2), rand);
+    gmp_printf("RSA à jeu réduit d'instructions pour 
+    n = %d, message : %Zd.", nbBits, msg);
+    genPrime(p, q, round(nbBits / 2), rand);
+    gmp_printf("p = %Zd\n", p);
+    gmp_printf("q = %Zd\n", q);
+    mpz_set_ui(e, 65537);
+    gmp_printf("e = %Zd\n", e);
+    mpz_mul(n, p, q); // n = p * q
+
+    gmp_printf("n = p * q = %Zd\n", n);
+
+    mpz_sub_ui(p_1, p, 1); // p - 1
+    mpz_sub_ui(q_1, q, 1); // q - 1
+
+    mpz_mul(phi, p_1, q_1); 
+
+    gmp_printf("phi = %Zd\n", phi);
+    computeInvert(d, e, phi); // d = e ^-1 [phi]
+    gmp_printf("d = %Zd\n", d);
+
+    printf("\n\n\n");
+...
+
+\end{minted}
+
+sont générés d'abord les éléments primordiaux pour pouvoir utiliser le cryptosystème RSA, à savoir, $p, q, n = p \cdot q$ et le message $msg$ qui est un nombre aléatoire de taille prédéfinie. Ensuite est calculé $d$ qui est l'inverse de $e$ modulo $\phi(n) = (p - 1) \cdot (q - 1)$.
+
+Dans le cas du RSA dit classique, la fonction pour chiffrer est la fonction  \begin{center}
+\textsf{encrypt}(\textsf{mpz\_t} $encrypted$, \textsf{mpz\_t} $message$, \textsf{mpz\_t} $e$, \textsf{mpz\_t} $n$)
+\end{center}
+Elle calcule le chiffré de $message$ en calculant grâce à la fonction \textsf{powering}
+\begin{center}
+$encrypted = (message)^e \mod n$.
+\end{center}
+
+\pagebreak
+
+
+\subsubsection{Déchiffrements}
+
+
+Pour ce qui est du déchiffrement, il y a des différences entre les deux versions, commençons par la version basique. Aussi simpliste que pour le chiffrement, pour déchiffrer il faut calculer une puissance modulaire mais avec la clé privée $d$.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n) {
+    powering(original, encrypted, d, n);
+}
+\end{minted}
+
+Quant à la version utilisant le théorème des restes chinois. Il y a des calculs qui précédent,
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+mpz_sub_ui(e_p, p, 1); //e_p = p - 1
+mpz_sub_ui(e_q, q, 1); //e_q = q - 1
+computeInvert(i_p, p, q); 
+computeInvert(d_p, e, e_p);
+computeInvert(d_q, e, e_q);
+\end{minted}
+
+En effet on calcule d'abord $i_p$ qui est l'inverse de $p$ modulo $q$, $d_p$ qui est l'inverse de $e$ modulo $e_p$ et $d_q$ qui est l'inverse de $e$ modulo $e_q$. Le déchiffrement est très différent, il se passe en deux étapes
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p) {
+    mpz_t message, m_p, m_q, n, _loc0, pq, _loc1;
+    mpz_inits(message, m_p, m_q, n, _loc0, pq, _loc1, NULL);
+    mpz_set_ui(message, 1);
+    mpz_mul(n, p, q);
+    decrypt(m_p, cipher, d_p, p); // m_p = cipher ^ d_p % p
+    decrypt(m_q, cipher, d_q, q); // m_q = cipher ^ d_q % q
+    mpz_sub(pq, m_q, m_p); // pq = m_q - m_p
+    mpz_mul(_loc0, pq, i_p); // _loc0 = pq - ip
+    getModulus(_loc1, _loc0, q); // _loc1 = _loc0 - q
+    mpz_mul(message, _loc1, p); // message = _loc1 * p
+    mpz_add(message, message, m_p); // message = message + m_p
+    getModulus(message, message, n); // message = message + n
+    mpz_set(msg, message);
+    mpz_clears(message, m_p, m_q, n, _loc0, _loc1, pq, NULL);
+}
+\end{minted}
+Le théorème des restes chinois appliqués à RSA revient juste à  décomposer le chiffré en deux parties et le calcul final est le suivant
+\begin{center}
+$M = \Big( \big( (M_p - M_q) \cdot q^{-1}\big) \mod p \Big) \cdot q + M_q$
+\end{center}
+
+\subsubsection{Signatures}
+
+Les signatures pour le RSA basique sont très simple il s'agit uniquement de mettre à la puissance $d$ le message $m$ le tout modulo $n$.
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void sig_msg_RSA(mpz_t sig, mpz_t message, mpz_t d, mpz_t n) {
+    decrypt(sig, message ,d ,n);
+}
+\end{minted}
+Concernant la version CRT, cela est légèrement plus complexe, on utilise la fonction de déchiffrement version CRT, on passe donc les éléments précalculés en paramètres
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p) {
+    decrypt_CRT(sig, msg , d_p,  p,  d_q,  q,  i_p);
+}
+\end{minted}
+
+Une fonction vérifiant la signature a été également développée
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize,
+linenos
+]
+{C}
+void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n) {
+    mpz_t hash;
+    mpz_init(hash);
+    encrypt(hash, sig, e, n);
+    if(mpz_cmp(message, hash) == 0) {
+        printf("Signature Status : OK!\n");
+    }
+    else {
+        printf("Signature Status : NOT OK ! Altered message.\n");
+    }
+    mpz_clear(hash);
+}
+\end{minted}
+ce qui permet de vérifier l'intégrité, ou non, d'un message.
+\pagebreak
+\section{Jeu d'essai}
+Nous allons vous montré au travers d'une impression d'écran l'éxécution de notre programme avec un nombre de bits égal à 2048.
+
+\begin{center}
+\includegraphics[scale=0.38]{jeu1.png}
+\end{center}
+\pagebreak
+\section*{Conclusion}
+\addcontentsline{toc}{part}{Conclusion}
+
+\pagebreak
+\section*{Références}
+\addcontentsline{toc}{part}{Références}
+
+\end{document}

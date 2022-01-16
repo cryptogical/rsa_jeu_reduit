@@ -264,21 +264,32 @@ void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, m
     decrypt_CRT(sig, msg , d_p,  p,  d_q,  q,  i_p);
 }
 
+
 int main(int argc, char* argv[]) {
-    
     if(argv[1] == NULL) {
         printf("Il manque le nombre de bits. Fin du programme.\n");
         return 0;
     }
-    // COMPUTATION
-    clock_t t1, t2, t1_, t2_;
     int nbBits = atoi(argv[1]);
+    int sizeBlocks = 0;
     gmp_randstate_t rand;
     gmp_randinit_default (rand);
     gmp_randseed_ui(rand, time(NULL));
-    mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg;
-    mpz_inits(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
+    mpz_t msg;
+    mpz_init(msg);
     genNumber(msg, round(nbBits / 2), rand);
+
+    gmp_printf("RSA à jeu réduit d'instructions pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
+    
+    // COMPUTATION
+    clock_t t1, t2, t1_, t2_;
+    int nbBits = bits;
+    gmp_randstate_t rand;
+    gmp_randinit_default (rand);
+    gmp_randseed_ui(rand, time(NULL));
+    mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt;
+    mpz_inits(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, NULL);
+
     gmp_printf("RSA à jeu réduit d'instructions pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
     genPrime(p, q, round(nbBits / 2), rand);
     gmp_printf("p = %Zd\n", p);
@@ -301,7 +312,6 @@ int main(int argc, char* argv[]) {
     printf("\n\n\n");
 
     // RSA BASIC
-    printf("RSA (classic).\n");
     t1 = clock();
     encrypt(encrypted, msg, e, n);
     gmp_printf("Cipher : %Zd\n", encrypted);
@@ -350,5 +360,6 @@ int main(int argc, char* argv[]) {
     printf("\n\n");
     double average =  (exec / exec_) * 100;
     printf("Conclusion : CRT is %.0f%% faster than classic RSA.\n", average);
+
     return 0;
 }
