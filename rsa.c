@@ -20,6 +20,8 @@ void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t
 void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, mpz_t i_p);
 void getModulus(mpz_t res, mpz_t a, mpz_t b);
 void getModulus_ui(mpz_t res, mpz_t a, int b);
+//void ReduMod_ui(mpz_t res, mpz_t a, int b);
+//void ReduMod(mpz_t res, mpz_t a, mpz_t b);
 
 void computeInvert(mpz_t d , mpz_t e , mpz_t n) { // it's EEA, nothing more nothing less
    mpz_t e0, t0, t, q, r, n0, _loc0;
@@ -161,6 +163,54 @@ void genNumber(mpz_t p, int n, gmp_randstate_t state) {
     mpz_clears(rand, _loc0, max, min, NULL);
 }
 
+/*void ReduMod_ui(mpz_t res, mpz_t a, int b){ //On voit res = a % b
+    mpz_t temp, temp2, z_b;
+    mpz_inits(temp, temp2, z_b, NULL);
+    mpz_set_ui(z_b, b);
+
+    if (mpz_sgn(z_b) < 0){
+        mpz_neg(z_b, z_b);
+        //gmp_printf("%Zu", z_b);
+    }
+    while(mpz_sgn(a) < 0){
+        mpz_add(a, a, z_b);
+    }
+    //gmp_printf("%Zu", a);
+
+    if(mpz_cmp(a, z_b) > 0){
+        mpz_div(temp, a, z_b);
+        mpz_mul(temp2, temp, z_b);
+        mpz_sub(res, a, temp2);
+    }
+    else{
+        mpz_set(res, a);
+    }
+    mpz_clears(temp, temp2, z_b, NULL);
+}*/
+
+/*void ReduMod(mpz_t res, mpz_t a, mpz_t b){ //On voit res = a % b
+    mpz_t temp, temp2;
+    mpz_inits(temp, temp2, NULL);
+
+    if (mpz_sgn(b) < 0){
+        mpz_neg(b, b);
+        //gmp_printf("%Zu", b);
+    }
+    while(mpz_sgn(a) < 0){
+        mpz_add(a, a, b);
+    }
+    //gmp_printf("%Zu", a);
+
+    if(mpz_cmp(a,b) > 0){
+        mpz_div(temp, a, b);
+        mpz_mul(temp2, temp, b);
+        mpz_sub(res, a, temp2);
+    }
+    else{
+        mpz_set(res, a);
+    }
+    mpz_clears(temp, temp2, NULL);
+}*/
 
 void PGCD(mpz_t result, mpz_t a, mpz_t b) {
     mpz_t _loc0, _loc1, _loc2;
@@ -183,7 +233,7 @@ void encrypt(mpz_t encrypted, mpz_t message, mpz_t e, mpz_t n) {
 }
 
 void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n) {
-    powering(original, encrypted, d, n);;
+    powering(original, encrypted, d, n); 
 }
 
 void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) { // res = a ^ b [n]
@@ -200,7 +250,7 @@ void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) { // res = a ^ b [n]
             getModulus(_loc, _loc, n);
         }
         mpz_mul(a_bis, a_bis, a_bis);
-        getModulus (a_bis, a_bis, n);
+        getModulus(a_bis, a_bis, n);
         mpz_tdiv_q_ui(b_bis, b_bis, 2);
     }
 
@@ -277,14 +327,14 @@ int main(int argc, char* argv[]) {
     gmp_randseed_ui(rand, time(NULL));
     mpz_t msg;
     mpz_init(msg);
-    genNumber(msg, round(nbBits / 2), rand);
+    genNumber(msg, nbBitsround(nbBits / 2), rand);
 
-    gmp_printf("RSA à jeu réduit d'instructions pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
+    //gmp_printf("RSA à jeu réduit d'instructions pour n = %d, message : %Zd.\n\n\n", nbBits, msg);
     
     // COMPUTATION
     clock_t t1, t2, t1_, t2_;
-    int nbBits = bits;
-    gmp_randstate_t rand;
+    //int nbBits = bits;
+    //gmp_randstate_t rand;
     gmp_randinit_default (rand);
     gmp_randseed_ui(rand, time(NULL));
     mpz_t n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt;
@@ -322,7 +372,7 @@ int main(int argc, char* argv[]) {
     decrypt(decrypted, encrypted, d, n);
     gmp_printf("Decipher : %Zd\n", decrypted);
     t2 = clock();
-    double exec = (double) (t2 - t1) * 1000 / (double) CLOCKS_PER_SEC;
+    double exec = (double) (t2 - t1) * 1000 / CLOCKS_PER_SEC;
     printf("Execution time : %f ms \n", exec);
 
     printf("\n\n\n");
@@ -355,11 +405,13 @@ int main(int argc, char* argv[]) {
     t2_ = clock();
     mpz_clears(n, d, e, p, q, p_1, q_1, phi, encrypted, decrypted, sig, cipher, decipher, d_p, d_q, i_p, s_p, s_q, e_p, e_q, sig_crt, msg, NULL);
     gmp_randclear(rand);
-    double exec_ = (double) (t2_ - t1_) * 1000 / (double) CLOCKS_PER_SEC;
+    double exec_ = (double) (t2_ - t1_) * 1000 / CLOCKS_PER_SEC;
     printf("Execution time : %f ms \n", exec_);
     printf("\n\n");
-    double average =  (exec / exec_) * 100;
+    //double average =  (exec_ / exec) * 100;
+    double average = 100 * (exec - exec_)/exec_;
     printf("Conclusion : CRT is %.0f%% faster than classic RSA.\n", average);
+    //printf("Conclusion : CRT is %f times faster than classic RSA.\n", average);
 
     return 0;
 }

@@ -149,21 +149,23 @@
 \addcontentsline{toc}{part}{Introduction}
 
 Le but de ce travail est d'implémenter les différentes fonctionnalités de RSA (généra-\\
-tion des clés, chiffrement, déchiffrement, signature, et méthode CRT). Ces implémen-\\
-tations devront satisfaire à une contrainte bien précise : ne pas disposer de fonctions mathématiques évoluées, et se limiter aux seules quatre opérations de base sur grands entiers, que sont l'addition, la soustraction, la multiplication et la division. On appelle cette contrainte \textit{jeu réduit d'instructions}.\\\\
+tion des clés, chiffrement, déchiffrement, signature, et méthode CRT, pour \textit{Chinese Remainder Theorem}). Ces implémentations devront satisfaire à une contrainte bien précise : ne pas disposer de fonctions mathématiques évoluées, et se limiter aux seules quatre opérations de base sur grands entiers, que sont l'addition, la soustraction, la multiplication et la division. On appelle cette contrainte \textit{jeu réduit d'instructions}.\\\\
 Pour la manipulation de grands entiers en \textbf{C}, l'utilisation de la bibliothèque GMP, étudiée ce semestre, est nécessaire.
 
+
+\textcolor{red}{Rappels RSA et CRT}
  % A ETOFFER %
 
 \pagebreak
 
 \section{Fonctions}
-En raison de l'utilisation des seules quatre opérations élémentaires pour ce projet, des fonctions "supplémentaires" à RSA ont dû être ajoutées. En effet, pour chiffrer comme pour déchiffrer avec RSA, certaines opérations comme l'exponentiation modulaire, l'inverse modulaire, ou plus simplement le calcul modulaire sont nécessaires. Nous allons donc présenter ces fonctions dans la première partie. Pour ce qui est de la seconde partie, vous retrouverez toutes les fonctions nécessaires à la bonne fonctionnalité de RSA, c'est à dire les fonctions de chiffrement et déchiffrement, de signature et de vérification de signature, mais également leurs analogues par la méthode CRT. De plus, vous pourrez y retrouver la fonction de génération des clés.
+En raison de l'utilisation des seules quatre opérations élémentaires pour ce projet, des fonctions "supplémentaires" à RSA ont dû être ajoutées. En effet, pour chiffrer comme pour déchiffrer avec RSA, certaines opérations comme l'exponentiation modulaire, l'inverse modulaire, ou plus simplement la réduction modulaire sont nécessaires. Nous allons donc présenter ces fonctions dans la première partie. Pour ce qui est de la seconde partie, vous retrouverez toutes les fonctions nécessaires à la bonne fonctionnalité de RSA, c'est à dire les fonctions de chiffrement et déchiffrement, de signature et de vérification de signature, mais également leurs analogues par la méthode CRT. De plus, vous pourrez y retrouver la fonction de génération des clés.
 
 \subsection{Fonctions palliatives au jeu réduit d'instructions.}
 
-\subsubsection{getModulus\_ui(mpz\_t res, mpz\_t a, int b)}
-Cette fonction permet de calculer le modulo d'un grand nombre, c'est à dire son reste par la division euclidienne. Ici, le reste de la division euclidienne de $a$ par $b$ sera stocké dans $res$. $res$ est un \textsf{mpz\_t}, de même que $a$, mais $b$ est quant à lui un entier \textsf{int}.
+\subsubsection{Calcul du modulo de très grands nombres}
+%\subsubsection{getModulus\_ui(mpz\_t res, mpz\_t a, int b)}
+Cette fonction permet de calculer le modulo d'un grand nombre, c'est à dire son reste par la division euclidienne. Ici, le reste de la division euclidienne de $a$ par $b$ sera stocké dans $res$. La variable $res$ est un \textsf{mpz\_t}, de même que $a$, mais $b$ est quant à lui un entier \textsf{int}.
 
 \begin{minted}
 [
@@ -183,9 +185,9 @@ void getModulus_ui(mpz_t res, mpz_t a, int b) {
 }
 \end{minted}
 
-Dans cette fonction, nous avons simplement effectué un cast de int vers mpz\_t en déclarant un \textsf{mpz\_t} $z\_b$. On lui assigne alors la valeur de $b$ (ligne $4$). Ensuite, on récupère le reste de la division euclidienne, que l'on stocke dans $res$ grâce à la ligne $5$.
+Dans cette fonction, nous avons simplement effectué un cast de int vers mpz\_t en déclarant un \textsf{mpz\_t} $z\_b$. On lui assigne alors la valeur de $b$ (ligne $4$). Ensuite, on récupère le reste de la division euclidienne, que l'on stocke dans $res$ grâce à la ligne $5$.\\
 
-La fonction getModulus(\textsf{mpz\_t} $res$, \textsf{mpz\_t} $a$, \textsf{mpz\_t} $b$)qui renvoie le résultat de $a$ modulo $b$, c'est à dire le reste de la division euclidienne de $a$ par $b$, et ce résultat est stocké dans $res$.
+La fonction getModulus(\textsf{mpz\_t} $res$, \textsf{mpz\_t} $a$, \textsf{mpz\_t} $b$) renvoie le résultat de $a$ modulo $b$, c'est à dire le reste de la division euclidienne de $a$ par $b$, et ce résultat est stocké dans $res$. Pour cette fonction nous ne travaillons qu'avec des \textsf{mpz\_t}. Il n'y a pas de int.
 
 \begin{minted}
 [
@@ -301,6 +303,10 @@ void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) {
 }
 \end{minted}
 
+Il s'agit ici de l'algorithme \textbf{Square and Multiply}.
+%On initialise $b\_bis$ à $b$. De cette manière on va garder la valeur de $b$ et ne travailler qu'avec $b\_bis$. Tant qu'il est divisible par $2$, et supérieur à $0$, on va récupérer le reste de la division euclidienne de $b\_bis$ par $2$. Le nombre de division par $2$ effectué sera stocké dans la variable $t$ (ligne $9$). Il est clair qu'après ces étapes, on aura soit $b\_bis = 0$, soit $b\_bis = 1$.\\
+%Au préalable, la valeur de $a$ avait été stockée dans une variable $a\_bis$, pour les mêmes raisons que $b$. Si $t$ est différent de $0$, on stocke $a\_bis$ dans $\_loc$ et ..... \textcolor{red}{À finir}
+
 %%% Finir de détailler %%%
 
 \pagebreak
@@ -310,10 +316,11 @@ void powering(mpz_t result, mpz_t a, mpz_t b, mpz_t n) {
 Dans cette section, vous trouverez toutes les fonctions relatives au bon fonctionnement de RSA. Cela va de la génération des clés à la signature RSA, en passant par le chiffrement et le déchiffrement, les vérifications de signature et les mêmes méthodes en version CRT.
 
 \subsubsection{Génération des clés}
-Dans un premier temps, nous avons créés des fonctions permettant de créer un nombre premier (et de vérifier qu'il est bien premier). Nous avons également implémenté une fonction qui calcule le PGCD de deux nombres. Ceci dans le but de créer efficacement les clés publiques et privées de RSA.\\
+Dans un premier temps, nous avons créés des fonctions permettant de créer un nombre premier (et de vérifier qu'il est bien premier). Nous avons également implé-\\
+menté une fonction qui calcule le PGCD de deux nombres. Ceci dans le but de créer efficacement les clés publiques et privées de RSA.\\\\
 %\addcontentsline{toc}{part}{Vérification du caractère premier d'un nombre}
 \textbf{Vérification du caractère premier d'un nombre}\\\\
-La fonction qui permet la génération des grands premiers $p$ et $q$ a l'en-tête suivante :
+La fonction qui permet la génération des grands premiers $p$ et $q$ est la suivante :
 
 \begin{minted}
 [
@@ -351,9 +358,9 @@ void genPrime(mpz_t p, mpz_t q, int n, gmp_randstate_t state) {
 
 \end{minted}
 
-Cette fonction va générer des nombres $p$ et $q$ de taille $n$ et va ensuite les 'rendre' premier grâce à la fonction \textsf{bePrime(\textsf{mpz\_t} $p$, \textsf{mpz\_t} $t$)} qui est disponible dans le fichier source de notre projet. Le test de primalité utilisé est basé sur le test de \textsc{Miller Rabin}.
+Cette fonction va générer des nombres $p$ et $q$ de taille $n$ et va ensuite les 'rendre' premier grâce à la fonction \textsf{bePrime(\textsf{mpz\_t} $p$, \textsf{mpz\_t} $t$)} qui est disponible dans le fichier source de notre projet. Le test de primalité utilisé est basé sur le test probabiliste de \textsc{Miller-Rabin}.
 \subsubsection{Chiffrements}
-Concernant le chiffrement, il n'y aucun différence entre le RSA basique et le RSA CRT. Étudions le code suivant de la fonction \textsf{main()},
+Concernant le chiffrement, il n'y aucun différence entre le RSA basique et le RSA CRT. Étudions le code suivant de la fonction \textsf{main()} :
 \begin{minted}
 [
 frame=lines,
@@ -393,7 +400,7 @@ linenos
 
 \end{minted}
 
-sont générés d'abord les éléments primordiaux pour pouvoir utiliser le cryptosystème RSA, à savoir, $p, q, n = p \cdot q$ et le message $msg$ qui est un nombre aléatoire de taille prédéfinie. Ensuite est calculé $d$ qui est l'inverse de $e$ modulo $\phi(n) = (p - 1) \cdot (q - 1)$.
+Sont d'abord générés les éléments primordiaux pour pouvoir utiliser le cryptosystème RSA, à savoir, $p, q, n = p \cdot q$ et le message $msg$ qui est un nombre aléatoire de taille prédéfinie. Ensuite est calculé $d$ qui est l'inverse de $e$ modulo $\phi(n) = (p - 1) \cdot (q - 1)$.
 
 Dans le cas du RSA dit classique, la fonction pour chiffrer est la fonction  \begin{center}
 \textsf{encrypt}(\textsf{mpz\_t} $encrypted$, \textsf{mpz\_t} $message$, \textsf{mpz\_t} $e$, \textsf{mpz\_t} $n$)
@@ -409,7 +416,7 @@ $encrypted = (message)^e \mod n$.
 \subsubsection{Déchiffrements}
 
 
-Pour ce qui est du déchiffrement, il y a des différences entre les deux versions, commençons par la version basique. Aussi simpliste que pour le chiffrement, pour déchiffrer il faut calculer une puissance modulaire mais avec la clé privée $d$.
+Pour ce qui est du déchiffrement, il y a des différences entre les deux versions. Commençons par la version basique. Aussi simpliste que pour le chiffrement, pour déchiffrer il faut calculer une puissance modulaire mais avec la clé privée $d$.
 
 \begin{minted}
 [
@@ -426,7 +433,7 @@ void decrypt(mpz_t original, mpz_t encrypted, mpz_t d, mpz_t n) {
 }
 \end{minted}
 
-Quant à la version utilisant le théorème des restes chinois. Il y a des calculs qui précédent,
+Quant à la version utilisant le théorème chinois des restes. Il y a des calculs qui précèdent,
 
 \begin{minted}
 [
@@ -474,14 +481,14 @@ void decrypt_CRT(mpz_t msg,  mpz_t cipher , mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t
     mpz_clears(message, m_p, m_q, n, _loc0, _loc1, pq, NULL);
 }
 \end{minted}
-Le théorème des restes chinois appliqués à RSA revient juste à  décomposer le chiffré en deux parties et le calcul final est le suivant
+Le théorème chinois des restes appliqués à RSA revient juste à  décomposer le chiffré en deux parties et le calcul final est le suivant
 \begin{center}
 $M = \Big( \big( (M_p - M_q) \cdot q^{-1}\big) \mod p \Big) \cdot q + M_q$
 \end{center}
 
 \subsubsection{Signatures}
 
-Les signatures pour le RSA basique sont très simple il s'agit uniquement de mettre à la puissance $d$ le message $m$ le tout modulo $n$.
+Les signatures pour le RSA basique sont très simples. Il s'agit uniquement de mettre à la puissance $d$ le message $m$, le tout modulo $n$.
 \begin{minted}
 [
 frame=lines,
@@ -496,7 +503,7 @@ void sig_msg_RSA(mpz_t sig, mpz_t message, mpz_t d, mpz_t n) {
     decrypt(sig, message ,d ,n);
 }
 \end{minted}
-Concernant la version CRT, cela est légèrement plus complexe, on utilise la fonction de déchiffrement version CRT, on passe donc les éléments précalculés en paramètres
+Concernant la version CRT, cela est légèrement plus complexe. On utilise la fonction de déchiffrement version CRT. On passe donc les éléments pré-calculés en paramètres
 \begin{minted}
 [
 frame=lines,
@@ -512,7 +519,7 @@ void sig_msg_RCT(mpz_t sig, mpz_t msg, mpz_t d_p, mpz_t p, mpz_t d_q, mpz_t q, m
 }
 \end{minted}
 
-Une fonction vérifiant la signature a été également développée
+Une fonction vérifiant la signature a également été développée,
 \begin{minted}
 [
 frame=lines,
@@ -536,17 +543,33 @@ void verif_sig_RSA(mpz_t sig , mpz_t message, mpz_t e, mpz_t n) {
     mpz_clear(hash);
 }
 \end{minted}
-ce qui permet de vérifier l'intégrité, ou non, d'un message.
+ce qui permet de vérifier l'intégrité, d'un message.
 \pagebreak
 \section{Jeu d'essai}
-Nous allons vous montré au travers d'une impression d'écran l'éxécution de notre programme avec un nombre de bits égal à 2048.
-
+Nous allons vous montrer, au travers d'une impression d'écran, l'exécution de notre programme avec un nombre de bits égal à $2048$.
 \begin{center}
-\includegraphics[scale=0.38]{jeu1.png}
+\includegraphics[scale=0.36]{jeu1.png}
 \end{center}
+\vspace{-72pt}
+En premier lieu apparaît le message généré aléatoirement de la moitié de la taille des bits définis à l'appel du programme. Ici, $2048$.\\
+Vient ensuite l'affichage des paramètres $p$, $q$ et $\phi$ et des parties de clés $e$, $n$ et $d$.\\
+\\
+Avec ces éléments, vient le RSA (classic).\\
+Le résultat du calcul du chiffré (cipher $=$ message$^e$ (mod $n$)) est affiché. Vient ensuite la signature du chiffré, qui permettra de vérifier que le message reçu, déchiffré au préalable, n'a pas été modifié. Si tel est le cas, le Signature Status renverra "OK!". Autrement, il renverra "NOT OK ! Altered message."\\
+Enfin, c'est le déchiffré du chiffré qui sera affiché, et on voit que le message originel et le Decipher sont les mêmes.\\
+\\
+Enfin, le RSA avec la méthode CRT est affiché.\\
+Pour ce RSA là, la clé privée doit être dérivée, ce qui nous donne donc $d\_p$, $d\_q$ et également $i\_p$. Est ensuite affiché le chiffré, qui peut être vérifié avec celui obtenu par le chiffrement RSA classique. De même que pour la signature et le déchiffrement.
 \pagebreak
 \section*{Conclusion}
 \addcontentsline{toc}{part}{Conclusion}
+
+Nous avons eu la chance de pouvoir travailler sur notre premier choix de projet. Les sujets sur RSA nous intéressaient et la contrainte de jeu réduit d'instructions nous a attiré car nous suivons l'Unité d'Enseignement Carte à Puce et Développement Java Card. Or, l'environnement des cartes à puces est contraint et le concept de jeu réduit d'instructions s'y prête tout particulièrement.\\
+\\
+Nous avons apprécié travailler sur ce sujet pour les raisons citées ci-avant, et également car l'utilisation de la bibliothèque GMP était nécessaire et que nous avions tous deux appréciés les travaux pratiques du cours de Développement de Logiciels Cryptographiques et l'utilisation de cette fameuse bibliothèque.\\
+L'intégralité des fonctions relatives à RSA ont été implémentées, ainsi que des fonctions efficaces, satisfaisant la contrainte de jeu réduit d'instructions, pour calculer l'exponentiation modulaire ou encore l'inverse modulaire. Nous affirmons ainsi que le projet a été mené à bien. Cependant, comme dans n'importe quel projet, l'implémentation de nouvelles fonctionnalités est un plus et il est vrai que ceci nous a manqué (Faute d'imagination ?). C'est pourquoi nous nous sommes concentrés sur le respect total (stricte ?) des contraintes qu'amène le jeu réduit d'instructions. Nous estimons donc notre programme assez bien optimisé, ce qui est essentiel dans ce contexte et avec un algorithme coûteux comme RSA, considérant la taille des clés utilisées et sa complexité.
+
+
 
 \pagebreak
 \section*{Références}
